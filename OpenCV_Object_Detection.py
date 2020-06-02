@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import imutils
-from collections import deque
 
 def nothing(n):
     pass
@@ -14,10 +13,10 @@ def select_obj():
     cv2.createTrackbar("Saturation End", "Choose the object", 255, 255, nothing)
     cv2.createTrackbar("Value Start", "Choose the object", 0, 255, nothing)
     cv2.createTrackbar("Value End", "Choose the object", 255, 255, nothing)
-    cv2.createTrackbar("1 = selection made \n 0 = default", "Choose the object", 0, 1, nothing)
+    cv2.createTrackbar("2 = Selection Made\n1 = Previous Selection\n0 = Quit", "Choose the object", 0, 2, nothing)
     lower_range = None
     upper_range = None
-    flg = 0
+    key = 0
 
     input_vid = cv2.VideoCapture(0)
     ret = True
@@ -35,7 +34,7 @@ def select_obj():
         se = cv2.getTrackbarPos("Saturation End", "Choose the object")
         ve = cv2.getTrackbarPos("Value End", "Choose the object")
         upper_range = np.array([he, se, ve], dtype=np.uint8)
-        flg = cv2.getTrackbarPos("1 = selection made \n 0 = default", "Choose the object")
+        key = cv2.getTrackbarPos("2 = Selection Made\n1 = Previous Selection\n0 = Quit", "Choose the object")
 
         mask = cv2.inRange(img_hsv, lower_range, upper_range)
         mask = cv2.erode(mask, None, iterations=2)
@@ -45,16 +44,15 @@ def select_obj():
 
         if cv2.waitKey(1) & 0xff == ord('q'):
             break
-    return lower_range, upper_range, flg
+    return lower_range, upper_range, key
 
 
 def detect_obj(lower_range, upper_range):
     input_vid = cv2.VideoCapture(0)
     ret = True
-    centre_pts = deque(maxlen=20)
     while ret:
         ret, frame = input_vid.read()
-        # frame = imutils.resize(frame, width=600)           # resize if needed
+        frame = imutils.resize(frame, 1280)           # resize if needed
         blurred = cv2.GaussianBlur(frame, (11, 11), 0)
         img_hsv = cv2.cvtColor(blurred, cv2.COLOR_BGR2HSV)
 
@@ -65,7 +63,6 @@ def detect_obj(lower_range, upper_range):
         contour = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contour = imutils.grab_contours(contour)
         frame_marked = frame.copy()
-        centre = None
         if len(contour) > 0:
             largest_contour = max(contour, key=cv2.contourArea)
             (x, y), radius = cv2.minEnclosingCircle(largest_contour)
@@ -74,9 +71,7 @@ def detect_obj(lower_range, upper_range):
             if radius > 10:
                 cv2.circle(frame_marked, (int(x), int(y)), int(radius), (255, 255, 255), 2)
                 cv2.circle(frame_marked, centre, 5, (150, 150, 150), -1)
-                centre_pts.appendleft(centre)
 
-            # More stuff will be added soon
         cv2.imshow("Marked Frame!", frame_marked)
         if cv2.waitKey(1) & 0xff == ord('q'):
             break
@@ -84,9 +79,21 @@ def detect_obj(lower_range, upper_range):
     cv2.destroyAllWindows()
 
 def main():
-    lower_range, upper_range, flg = select_obj()
-    if flg == 1:
-        detect_obj(lower_range, upper_range)
+    lr, ur, key = select_obj()
+    if key == 2:
+        with open("hsv_settings.txt", 'w') as file:
+            file.write(str(lr[0])+" "+str(lr[1])+" "+str(lr[2])+"\n"+str(ur[0])+" "+str(ur[1])+" "+str(ur[2]))
+        detect_obj(lr, ur)
+    elif key == 1:
+        with open("hsv_settings.txt", 'r') as file:
+            line = file.readlines()
+            str_parts = line[0].split()
+            lr = np.array([str_parts[0], str_parts[1], str_parts[2]], dtype=np.uint8)
+            str_parts = line[1].split()
+            ur = np.array([str_parts[0], str_parts[1], str_parts[2]], dtype=np.uint8)
+        detect_obj(lr, ur)
+    else:
+        pass
 
 if __name__ == "__main__":
     main()

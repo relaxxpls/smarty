@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find smartytbt)/worlds/tbt.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="$(arg headless)"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+ 
+                                         <!--ROBOT USER-->	
+  <group ns="/user_tbt">
+    <param name="/user_tbt/robot_description" textfile="$(find smartytbt)/urdf/user_tbt.urdf" />
+    <param name="tf_prefix" value="usertbt_tf"/>
+    
+    <node name="user_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+    	   args="-x 1 -y 0 -z 0 -urdf -unpause -param robot_description -model usertbt " />
+    
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher_user" output="screen" >
+      <param name="publish_frequency" type="double" value="30.0" />
+    </node>
+  </group>
+  
+                                        <!--ROBOT SMARTY-->
+  <group ns="/smarty_tbt">
+    <param name="/smarty_tbt/robot_description" textfile="$(find smartytbt)/urdf/smarty_tbt.urdf" />
+    <param name="tf_prefix" value="smartytbt_tf"/>
+    
+    <node name="smarty_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+          args="-x -1 -y 0 -z 0 -urdf -unpause -param robot_description -model smartybt " />
+          
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher_smarty" output="screen" >
+      <param name="publish_frequency" type="double" value="30.0" />
+    </node>
+  </group>
+  
+</launch>
